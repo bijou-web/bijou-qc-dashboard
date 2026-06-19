@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bijou — Cleaning QC Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#020617;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.hdr{background:linear-gradient(135deg,#0f172a,#1e293b);border-bottom:1px solid #1e293b;padding:18px 28px;display:flex;justify-content:space-between;align-items:center}
+.hdr h1{font-size:20px;font-weight:700;color:#f8fafc}.hdr p{font-size:12px;color:#64748b;margin-top:2px}
+.kpi-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px 28px;border-bottom:1px solid #1e293b}
+.kpi{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:14px 18px}
+.kv{font-size:26px;font-weight:800;color:#38bdf8}.kl{font-size:11px;color:#64748b;margin-top:3px;text-transform:uppercase;letter-spacing:.5px}.ks{font-size:11px;color:#94a3b8;margin-top:2px}
+.ov{display:grid;grid-template-columns:1fr 340px;gap:20px;padding:20px 28px;border-bottom:1px solid #1e293b}
+.tabs{display:flex;padding:0 28px;background:#0f172a;border-bottom:1px solid #1e293b}
+.tab{padding:13px 22px;cursor:pointer;font-size:14px;font-weight:500;color:#64748b;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:#e2e8f0}.tab.active{color:#38bdf8;border-bottom-color:#38bdf8}
+.content{padding:20px 28px}.pnl{display:none}.pnl.active{display:block}
+table{width:100%;border-collapse:collapse;background:#0f172a;border-radius:10px;overflow:hidden;border:1px solid #1e293b}
+th{background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:11px 14px;text-align:left}
+td{padding:12px 14px;border-bottom:1px solid #1e293b;font-size:14px;vertical-align:middle}
+tr:last-child td{border-bottom:none}tr:hover td{background:rgba(30,41,59,.4)}tr{cursor:pointer;transition:background .15s}
+.badge{padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700}
+.badge-green{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
+.badge-yellow{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+.badge-red{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.badge-none{background:#1e293b;color:#64748b;border:1px solid #334155}
+.detail-card{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:18px;margin-top:14px}
+.mkpi{background:#1e293b;border-radius:8px;padding:10px;text-align:center}
+.mkpiv{font-size:20px;font-weight:800;color:#f8fafc}.mkpil{font-size:10px;color:#64748b;margin-top:2px;text-transform:uppercase}
+.cs{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:18px;margin-bottom:18px}
+.ct{font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px}
+.rg{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.lgd{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.ldot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.fail-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+</style></head><body>
+
+<div class="hdr">
+  <div><h1>🏠 Bijou Getaways — Cleaning QC Dashboard</h1>
+  <p>Quality control · 301 cleanings · June 19, 2026</p></div>
+  <div style="text-align:right;font-size:12px;color:#64748b">Source: Monday.com<br>
+  <span style="color:#334155">6 cleaners · 3 VAs · 4 regions</span></div>
+</div>
+
+<div class="kpi-bar">
+  <div class="kpi"><div class="kv">301</div><div class="kl">Total Cleanings</div><div class="ks">All regions</div></div>
+  <div class="kpi"><div class="kv" style="color:#f59e0b">42.2%</div><div class="kl">Overall Pass Rate</div><div class="ks">QC report passed</div></div>
+  <div class="kpi"><div class="kv" style="color:#10b981">84.7%</div><div class="kl">Submitted by 2pm</div><div class="ks">On-time report submission</div></div>
+  <div class="kpi"><div class="kv" style="color:#ef4444">3</div><div class="kl">Cleaners Below 70%</div><div class="ks">Pass rate needs attention</div></div>
+</div>
+
+<div class="ov">
+  <div class="cs" style="margin-bottom:0">
+    <div class="ct">📊 Performance Ranking — Pass Rate &amp; Submitted by 2pm</div>
+    <div style="height:240px"><canvas id="chart-perf"></canvas></div>
+    <div style="font-size:11px;color:#475569;margin-top:8px">Cleaners ranked by pass rate (high → low) · Green/amber/red = pass rate threshold · Blue = by 2pm rate</div>
+  </div>
+  <div class="cs" style="margin-bottom:0;overflow-y:auto;max-height:320px">
+    <div class="ct">🏆 Cleaner Leaderboard</div>
+    <div style="padding:8px 0;border-bottom:1px solid #1e293b"><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:17px;width:26px;flex-shrink:0">🥇</span><div style="flex:1;min-width:0"><span style="font-weight:600;color:#f8fafc;font-size:13px">Sandra VF</span> <span style="font-size:10px;color:#ec4899">France</span></div><span style="font-size:15px;font-weight:800;color:#10b981;flex-shrink:0">100.0%</span></div><div style="margin-bottom:3px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>Pass Rate</span><span style="color:#10b981">100.0%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#10b981;border-radius:3px;height:5px;width:100%"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>By 2pm</span><span style="color:#38bdf8">100.0%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#38bdf8;border-radius:3px;height:5px;width:100%"></div></div></div></div><div style="padding:8px 0;border-bottom:1px solid #1e293b"><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:17px;width:26px;flex-shrink:0">🥈</span><div style="flex:1;min-width:0"><span style="font-weight:600;color:#f8fafc;font-size:13px">Tavani Paris</span> <span style="font-size:10px;color:#ec4899">France</span></div><span style="font-size:15px;font-weight:800;color:#10b981;flex-shrink:0">100.0% <span style="font-size:12px;color:#94a3b8">→</span></span></div><div style="margin-bottom:3px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>Pass Rate</span><span style="color:#10b981">100.0%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#10b981;border-radius:3px;height:5px;width:100%"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>By 2pm</span><span style="color:#38bdf8">93.3% <span style="font-size:12px;color:#10b981">↑↑</span></span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#38bdf8;border-radius:3px;height:5px;width:93%"></div></div></div></div><div style="padding:8px 0;border-bottom:1px solid #1e293b"><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:17px;width:26px;flex-shrink:0">🥉</span><div style="flex:1;min-width:0"><span style="font-weight:600;color:#f8fafc;font-size:13px">Maria USVI</span> <span style="font-size:10px;color:#f59e0b">USVI</span></div><span style="font-size:15px;font-weight:800;color:#10b981;flex-shrink:0">78.7% <span style="font-size:12px;color:#94a3b8">→</span></span></div><div style="margin-bottom:3px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>Pass Rate</span><span style="color:#10b981">78.7%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#10b981;border-radius:3px;height:5px;width:78%"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>By 2pm</span><span style="color:#38bdf8">97.9% <span style="font-size:12px;color:#ef4444">↓</span></span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#38bdf8;border-radius:3px;height:5px;width:97%"></div></div></div></div><div style="padding:8px 0;border-bottom:1px solid #1e293b"><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:17px;width:26px;flex-shrink:0">4th</span><div style="flex:1;min-width:0"><span style="font-weight:600;color:#f8fafc;font-size:13px">Maria Napa</span> <span style="font-size:10px;color:#a855f7">Napa</span></div><span style="font-size:15px;font-weight:800;color:#f59e0b;flex-shrink:0">44.3% <span style="font-size:12px;color:#10b981">↑↑</span></span></div><div style="margin-bottom:3px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>Pass Rate</span><span style="color:#f59e0b">44.3%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#f59e0b;border-radius:3px;height:5px;width:44%"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>By 2pm</span><span style="color:#38bdf8">86.4% <span style="font-size:12px;color:#10b981">↑</span></span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#38bdf8;border-radius:3px;height:5px;width:86%"></div></div></div></div><div style="padding:8px 0;border-bottom:1px solid #1e293b"><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:17px;width:26px;flex-shrink:0">5th</span><div style="flex:1;min-width:0"><span style="font-weight:600;color:#f8fafc;font-size:13px">Oksana</span> <span style="font-size:10px;color:#3b82f6">Hawaii</span></div><span style="font-size:15px;font-weight:800;color:#ef4444;flex-shrink:0">25.4% <span style="font-size:12px;color:#10b981">↑↑</span></span></div><div style="margin-bottom:3px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>Pass Rate</span><span style="color:#ef4444">25.4%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#ef4444;border-radius:3px;height:5px;width:25%"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>By 2pm</span><span style="color:#38bdf8">76.2% <span style="font-size:12px;color:#10b981">↑↑</span></span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#38bdf8;border-radius:3px;height:5px;width:76%"></div></div></div></div><div style="padding:8px 0;border-bottom:1px solid #1e293b"><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:17px;width:26px;flex-shrink:0">6th</span><div style="flex:1;min-width:0"><span style="font-weight:600;color:#f8fafc;font-size:13px">Complete Cleaning</span> <span style="font-size:10px;color:#a855f7">Napa</span></div><span style="font-size:15px;font-weight:800;color:#ef4444;flex-shrink:0">7.7% <span style="font-size:12px;color:#10b981">↑↑</span></span></div><div style="margin-bottom:3px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>Pass Rate</span><span style="color:#ef4444">7.7%</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#ef4444;border-radius:3px;height:5px;width:7%"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:2px"><span>By 2pm</span><span style="color:#38bdf8">88.5% <span style="font-size:12px;color:#10b981">↑</span></span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#38bdf8;border-radius:3px;height:5px;width:88%"></div></div></div></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="sw('cleaners',this)">🧹 By Cleaner</div>
+  <div class="tab" onclick="sw('vas',this)">👤 By VA</div>
+  <div class="tab" onclick="sw('regions',this)">🌍 By Region</div>
+  <div class="tab" onclick="sw('charts',this)">📈 Charts</div>
+  <div class="tab" onclick="sw('failures',this)">❌ Why Failed</div>
+  <div class="tab" onclick="sw('emails',this)">📧 Cleaner Emails</div>
+</div>
+
+<div class="content">
+<div id="pnl-cleaners" class="pnl active">
+  <div class="lgd">
+    <span class="ldot" style="background:#10b981"></span><span style="font-size:12px;color:#94a3b8">≥70% Good</span>
+    <span class="ldot" style="background:#f59e0b"></span><span style="font-size:12px;color:#94a3b8">40–69% Coaching needed</span>
+    <span class="ldot" style="background:#ef4444"></span><span style="font-size:12px;color:#94a3b8">&lt;40% Critical</span>
+    <span style="margin-left:auto;font-size:11px;color:#475569">Ranked by pass rate · click row to expand</span>
+  </div>
+  <table><thead><tr>
+    <th style="text-align:center;width:40px">#</th>
+    <th>Cleaner</th><th>Region</th>
+    <th style="text-align:center">Cleanings</th>
+    <th style="text-align:center">Pass Rate</th>
+    <th style="text-align:center">By 2pm</th>
+  </tr></thead><tbody><tr onclick="showDetail('Sandra_VF')"><td style="text-align:center;color:#64748b;font-size:12px;font-weight:700">1</td><td><strong>Sandra VF</strong></td><td><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;padding:2px 8px;border-radius:12px;font-size:11px">🗼 France</span></td><td style="text-align:center"><strong>3</strong></td><td style="text-align:center"><span class="badge badge-green">100.0%</span></td><td style="text-align:center"><span class="badge badge-green">100.0%</span></td></tr>
+<tr onclick="showDetail('Tavani_Paris')"><td style="text-align:center;color:#64748b;font-size:12px;font-weight:700">2</td><td><strong>Tavani Paris</strong></td><td><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;padding:2px 8px;border-radius:12px;font-size:11px">🗼 France</span></td><td style="text-align:center"><strong>15</strong></td><td style="text-align:center"><span class="badge badge-green">100.0%</span></td><td style="text-align:center"><span class="badge badge-green">93.3%</span></td></tr>
+<tr onclick="showDetail('Maria_USVI')"><td style="text-align:center;color:#64748b;font-size:12px;font-weight:700">3</td><td><strong>Maria USVI</strong></td><td><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:2px 8px;border-radius:12px;font-size:11px">🏝️ USVI</span></td><td style="text-align:center"><strong>47</strong></td><td style="text-align:center"><span class="badge badge-green">78.7%</span></td><td style="text-align:center"><span class="badge badge-green">97.9%</span></td></tr>
+<tr onclick="showDetail('Maria_Napa')"><td style="text-align:center;color:#64748b;font-size:12px;font-weight:700">4</td><td><strong>Maria Napa</strong></td><td><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span></td><td style="text-align:center"><strong>88</strong></td><td style="text-align:center"><span class="badge badge-yellow">44.3%</span></td><td style="text-align:center"><span class="badge badge-green">86.4%</span></td></tr>
+<tr onclick="showDetail('Oksana')"><td style="text-align:center;color:#64748b;font-size:12px;font-weight:700">5</td><td><strong>Oksana</strong></td><td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;padding:2px 8px;border-radius:12px;font-size:11px">🌺 Hawaii</span></td><td style="text-align:center"><strong>122</strong></td><td style="text-align:center"><span class="badge badge-red">25.4%</span></td><td style="text-align:center"><span class="badge badge-green">76.2%</span></td></tr>
+<tr onclick="showDetail('Complete_Cleaning')"><td style="text-align:center;color:#64748b;font-size:12px;font-weight:700">6</td><td><strong>Complete Cleaning</strong></td><td><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span></td><td style="text-align:center"><strong>26</strong></td><td style="text-align:center"><span class="badge badge-red">7.7%</span></td><td style="text-align:center"><span class="badge badge-green">88.5%</span></td></tr>
+</tbody></table>
+  <div id="detail-container"><div id="detail-Sandra_VF" class="detail-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="color:#f8fafc;margin:0">Sandra VF <small style="color:#64748b;font-weight:400">France</small></h3><button onclick="hideDetail()" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:6px;cursor:pointer">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"><div class="mkpi"><div class="mkpiv">3</div><div class="mkpil">Total</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">100.0%</div><div class="mkpil">Pass Rate</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">100.0%</div><div class="mkpil">By 2pm</div></div></div><div style="height:140px"><canvas id="chart-Sandra_VF"></canvas></div><div style="margin-top:14px;margin-bottom:4px"><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Trend vs Prior Period</div><table style="width:100%;border-collapse:collapse;background:#0f172a;border-radius:8px;overflow:hidden;border:1px solid #1e293b"><thead><tr style="background:#1e293b"><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:left">Period</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">n</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Pass Rate</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">By 2pm</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th></tr></thead><tbody><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">7d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">1</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">30d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">3</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">60d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">3</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">730d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">3</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr></tbody></table></div><div style="margin-top:10px;font-size:11px;color:#64748b">Recent: 2026-06-14, 2026-06-02, 2026-05-28</div></div>
+<div id="detail-Tavani_Paris" class="detail-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="color:#f8fafc;margin:0">Tavani Paris <small style="color:#64748b;font-weight:400">France</small></h3><button onclick="hideDetail()" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:6px;cursor:pointer">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"><div class="mkpi"><div class="mkpiv">15</div><div class="mkpil">Total</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">100.0%</div><div class="mkpil">Pass Rate</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">93.3%</div><div class="mkpil">By 2pm</div></div></div><div style="height:140px"><canvas id="chart-Tavani_Paris"></canvas></div><div style="margin-top:14px;margin-bottom:4px"><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Trend vs Prior Period</div><table style="width:100%;border-collapse:collapse;background:#0f172a;border-radius:8px;overflow:hidden;border:1px solid #1e293b"><thead><tr style="background:#1e293b"><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:left">Period</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">n</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Pass Rate</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">By 2pm</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th></tr></thead><tbody><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">7d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">2</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8">→</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8">→</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">30d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">12</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8">→</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs 66.7%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">60d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">15</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">93.3%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">730d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">15</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">93.3%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr></tbody></table></div><div style="margin-top:10px;font-size:11px;color:#64748b">Recent: 2026-06-17, 2026-06-14, 2026-06-11, 2026-06-06, 2026-06-04</div></div>
+<div id="detail-Maria_USVI" class="detail-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="color:#f8fafc;margin:0">Maria USVI <small style="color:#64748b;font-weight:400">USVI</small></h3><button onclick="hideDetail()" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:6px;cursor:pointer">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"><div class="mkpi"><div class="mkpiv">47</div><div class="mkpil">Total</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">78.7%</div><div class="mkpil">Pass Rate</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">97.9%</div><div class="mkpil">By 2pm</div></div></div><div style="height:140px"><canvas id="chart-Maria_USVI"></canvas></div><div style="margin-top:14px;margin-bottom:4px"><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Trend vs Prior Period</div><table style="width:100%;border-collapse:collapse;background:#0f172a;border-radius:8px;overflow:hidden;border:1px solid #1e293b"><thead><tr style="background:#1e293b"><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:left">Period</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">n</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Pass Rate</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">By 2pm</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th></tr></thead><tbody><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">7d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">2</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">50.0%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓↓</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs 75.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">30d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">14</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">78.6%</span><span style="color:#475569;font-size:10px"> vs 81.2%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8">→</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">92.9%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">60d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">30</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">80.0%</span><span style="color:#475569;font-size:10px"> vs 76.5%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">96.7%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">730d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">47</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">78.7%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">97.9%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr></tbody></table></div><div style="margin-top:10px;font-size:11px;color:#64748b">Recent: 2026-06-16, 2026-06-13, 2026-06-11, 2026-06-07, 2026-06-06</div></div>
+<div id="detail-Maria_Napa" class="detail-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="color:#f8fafc;margin:0">Maria Napa <small style="color:#64748b;font-weight:400">Napa</small></h3><button onclick="hideDetail()" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:6px;cursor:pointer">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"><div class="mkpi"><div class="mkpiv">88</div><div class="mkpil">Total</div></div><div class="mkpi"><div class="mkpiv" style="color:#f59e0b">44.3%</div><div class="mkpil">Pass Rate</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">86.4%</div><div class="mkpil">By 2pm</div></div></div><div style="height:140px"><canvas id="chart-Maria_Napa"></canvas></div><div style="margin-top:14px;margin-bottom:4px"><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Trend vs Prior Period</div><table style="width:100%;border-collapse:collapse;background:#0f172a;border-radius:8px;overflow:hidden;border:1px solid #1e293b"><thead><tr style="background:#1e293b"><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:left">Period</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">n</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Pass Rate</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">By 2pm</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th></tr></thead><tbody><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">7d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">10</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">80.0%</span><span style="color:#475569;font-size:10px"> vs 55.6%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">70.0%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓↓</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">30d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">35</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">48.6%</span><span style="color:#475569;font-size:10px"> vs 36.8%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">82.9%</span><span style="color:#475569;font-size:10px"> vs 78.9%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">60d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">54</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">44.4%</span><span style="color:#475569;font-size:10px"> vs 44.1%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8">→</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">81.5%</span><span style="color:#475569;font-size:10px"> vs 94.1%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓↓</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">730d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">88</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">44.3%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">86.4%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr></tbody></table></div><div style="margin-top:10px;font-size:11px;color:#64748b">Recent: 2026-06-18, 2026-06-16, 2026-06-15, 2026-06-14, 2026-06-11</div></div>
+<div id="detail-Oksana" class="detail-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="color:#f8fafc;margin:0">Oksana <small style="color:#64748b;font-weight:400">Hawaii</small></h3><button onclick="hideDetail()" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:6px;cursor:pointer">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"><div class="mkpi"><div class="mkpiv">122</div><div class="mkpil">Total</div></div><div class="mkpi"><div class="mkpiv" style="color:#ef4444">25.4%</div><div class="mkpil">Pass Rate</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">76.2%</div><div class="mkpil">By 2pm</div></div></div><div style="height:140px"><canvas id="chart-Oksana"></canvas></div><div style="margin-top:14px;margin-bottom:4px"><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Trend vs Prior Period</div><table style="width:100%;border-collapse:collapse;background:#0f172a;border-radius:8px;overflow:hidden;border:1px solid #1e293b"><thead><tr style="background:#1e293b"><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:left">Period</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">n</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Pass Rate</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">By 2pm</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th></tr></thead><tbody><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">7d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">8</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">62.5%</span><span style="color:#475569;font-size:10px"> vs 38.5%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">87.5%</span><span style="color:#475569;font-size:10px"> vs 92.3%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">30d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">48</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">29.2%</span><span style="color:#475569;font-size:10px"> vs 0.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">91.7%</span><span style="color:#475569;font-size:10px"> vs 51.9%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">60d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">75</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">18.7%</span><span style="color:#475569;font-size:10px"> vs 36.2%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓↓</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">77.3%</span><span style="color:#475569;font-size:10px"> vs 74.5%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#94a3b8">→</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">730d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">122</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">25.4%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">76.2%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr></tbody></table></div><div style="margin-top:10px;font-size:11px;color:#64748b">Recent: 2026-06-18, 2026-06-17, 2026-06-15, 2026-06-14, 2026-06-13</div></div>
+<div id="detail-Complete_Cleaning" class="detail-card" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="color:#f8fafc;margin:0">Complete Cleaning <small style="color:#64748b;font-weight:400">Napa</small></h3><button onclick="hideDetail()" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:6px;cursor:pointer">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"><div class="mkpi"><div class="mkpiv">26</div><div class="mkpil">Total</div></div><div class="mkpi"><div class="mkpiv" style="color:#ef4444">7.7%</div><div class="mkpil">Pass Rate</div></div><div class="mkpi"><div class="mkpiv" style="color:#10b981">88.5%</div><div class="mkpil">By 2pm</div></div></div><div style="height:140px"><canvas id="chart-Complete_Cleaning"></canvas></div><div style="margin-top:14px;margin-bottom:4px"><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📈 Trend vs Prior Period</div><table style="width:100%;border-collapse:collapse;background:#0f172a;border-radius:8px;overflow:hidden;border:1px solid #1e293b"><thead><tr style="background:#1e293b"><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:left">Period</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">n</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Pass Rate</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">By 2pm</th><th style="padding:5px 8px;font-size:10px;color:#64748b;text-align:center">Δ</th></tr></thead><tbody><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">7d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">2</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">100.0%</span><span style="color:#475569;font-size:10px"> vs 0.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">50.0%</span><span style="color:#475569;font-size:10px"> vs 100.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">↓↓</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">30d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">19</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">10.5%</span><span style="color:#475569;font-size:10px"> vs 0.0%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑↑</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">89.5%</span><span style="color:#475569;font-size:10px"> vs 85.7%</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#10b981">↑</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">60d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">26</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">7.7%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">88.5%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr><tr style="border-bottom:1px solid #1e293b"><td style="padding:5px 8px;font-size:12px;color:#94a3b8;font-weight:600">730d</td><td style="padding:5px 8px;font-size:12px;color:#64748b;text-align:center">26</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">7.7%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td><td style="padding:5px 8px;font-size:12px;text-align:center"><span style="color:#f8fafc">88.5%</span><span style="color:#475569;font-size:10px"> vs —</span></td><td style="padding:5px 8px;text-align:center;font-size:15px;font-weight:700;color:#475569">N/A</td></tr></tbody></table></div><div style="margin-top:10px;font-size:11px;color:#64748b">Recent: 2026-06-17, 2026-06-13, 2026-06-10, 2026-06-06, 2026-06-05</div></div>
+</div>
+</div>
+
+<div id="pnl-vas" class="pnl">
+  <p style="color:#64748b;font-size:13px;margin-bottom:14px">Performance by VA who uploaded the QC entry · pass rate over last 7 / 30 / 60 days (with trend vs prior period) · ranked by all-time pass rate</p>
+  <table><thead><tr>
+    <th>VA</th><th style="text-align:center">Entries</th>
+    <th style="text-align:center">7d Pass</th>
+    <th style="text-align:center">30d Pass</th>
+    <th style="text-align:center">60d Pass</th>
+    <th style="text-align:center">All-time</th>
+    <th style="text-align:center">By 2pm</th>
+    <th>Regions</th>
+  </tr></thead><tbody><tr><td><strong>Baptiste Sarrat</strong></td><td style="text-align:center">18</td><td style="text-align:center"><span class="badge badge-green">100.0%</span> <span style="color:#94a3b8;font-size:12px">→</span><div style="font-size:10px;color:#475569;margin-top:2px">n=3</div></td><td style="text-align:center"><span class="badge badge-green">100.0%</span> <span style="color:#94a3b8;font-size:12px">→</span><div style="font-size:10px;color:#475569;margin-top:2px">n=15</div></td><td style="text-align:center"><span class="badge badge-green">100.0%</span><div style="font-size:10px;color:#475569;margin-top:2px">n=18</div></td><td style="text-align:center"><span class="badge badge-green">100.0%</span></td><td style="text-align:center"><span class="badge badge-green">94.4%</span></td><td><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;padding:2px 8px;border-radius:12px;font-size:11px">🗼 France</span></td></tr>
+<tr><td><strong>Nicolas Carrasco</strong></td><td style="text-align:center">39</td><td style="text-align:center"><span class="badge badge-green">100.0%</span> <span style="color:#94a3b8;font-size:12px">→</span><div style="font-size:10px;color:#475569;margin-top:2px">n=1</div></td><td style="text-align:center"><span class="badge badge-yellow">64.7%</span> <span style="color:#ef4444;font-size:12px">↓↓</span><div style="font-size:10px;color:#475569;margin-top:2px">n=17</div></td><td style="text-align:center"><span class="badge badge-yellow">69.0%</span> <span style="color:#ef4444;font-size:12px">↓↓</span><div style="font-size:10px;color:#475569;margin-top:2px">n=29</div></td><td style="text-align:center"><span class="badge badge-green">74.4%</span></td><td style="text-align:center"><span class="badge badge-green">94.9%</span></td><td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;padding:2px 8px;border-radius:12px;font-size:11px">🌺 Hawaii</span> <span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span> <span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:2px 8px;border-radius:12px;font-size:11px">🏝️ USVI</span></td></tr>
+<tr><td><strong>Luna Proietti</strong></td><td style="text-align:center">128</td><td style="text-align:center"><span class="badge badge-yellow">62.5%</span> <span style="color:#10b981;font-size:12px">↑↑</span><div style="font-size:10px;color:#475569;margin-top:2px">n=16</div></td><td style="text-align:center"><span class="badge badge-red">27.7%</span> <span style="color:#10b981;font-size:12px">↑↑</span><div style="font-size:10px;color:#475569;margin-top:2px">n=65</div></td><td style="text-align:center"><span class="badge badge-red">21.4%</span> <span style="color:#ef4444;font-size:12px">↓↓</span><div style="font-size:10px;color:#475569;margin-top:2px">n=117</div></td><td style="text-align:center"><span class="badge badge-red">22.7%</span></td><td style="text-align:center"><span class="badge badge-green">78.1%</span></td><td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;padding:2px 8px;border-radius:12px;font-size:11px">🌺 Hawaii</span> <span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span> <span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:2px 8px;border-radius:12px;font-size:11px">🏝️ USVI</span></td></tr>
+</tbody></table>
+</div>
+
+<div id="pnl-regions" class="pnl">
+  <div class="rg"><div style="background:#0f172a;border:1px solid #3b82f644;border-radius:12px;padding:20px;border-top:3px solid #3b82f6"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="color:#3b82f6;margin:0">🌺 Hawaii</h3><span style="background:#3b82f622;color:#3b82f6;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700">122 cleanings</span></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px"><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#ef4444">25.4%</div><div style="font-size:11px;color:#64748b">Pass Rate</div></div><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#10b981">76.2%</div><div style="font-size:11px;color:#64748b">By 2pm</div></div></div><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:8px">Top Cleaners</div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Oksana</span><span style="color:#94a3b8">122</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#3b82f6;border-radius:3px;height:5px;width:100%"></div></div></div></div><div style="background:#0f172a;border:1px solid #a855f744;border-radius:12px;padding:20px;border-top:3px solid #a855f7"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="color:#a855f7;margin:0">🍷 Napa</h3><span style="background:#a855f722;color:#a855f7;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700">114 cleanings</span></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px"><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#ef4444">36.0%</div><div style="font-size:11px;color:#64748b">Pass Rate</div></div><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#10b981">86.8%</div><div style="font-size:11px;color:#64748b">By 2pm</div></div></div><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:8px">Top Cleaners</div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Maria Napa</span><span style="color:#94a3b8">88</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#a855f7;border-radius:3px;height:5px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Complete Cleaning</span><span style="color:#94a3b8">26</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#a855f7;border-radius:3px;height:5px;width:29%"></div></div></div></div><div style="background:#0f172a;border:1px solid #f59e0b44;border-radius:12px;padding:20px;border-top:3px solid #f59e0b"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="color:#f59e0b;margin:0">🏝️ USVI</h3><span style="background:#f59e0b22;color:#f59e0b;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700">47 cleanings</span></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px"><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#10b981">78.7%</div><div style="font-size:11px;color:#64748b">Pass Rate</div></div><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#10b981">97.9%</div><div style="font-size:11px;color:#64748b">By 2pm</div></div></div><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:8px">Top Cleaners</div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Maria USVI</span><span style="color:#94a3b8">47</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#f59e0b;border-radius:3px;height:5px;width:100%"></div></div></div></div><div style="background:#0f172a;border:1px solid #ec489944;border-radius:12px;padding:20px;border-top:3px solid #ec4899"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="color:#ec4899;margin:0">🗼 France</h3><span style="background:#ec489922;color:#ec4899;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700">18 cleanings</span></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px"><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#10b981">100.0%</div><div style="font-size:11px;color:#64748b">Pass Rate</div></div><div style="text-align:center;background:#1e293b;border-radius:8px;padding:10px"><div style="font-size:18px;font-weight:700;color:#10b981">94.4%</div><div style="font-size:11px;color:#64748b">By 2pm</div></div></div><div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:8px">Top Cleaners</div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Tavani Paris</span><span style="color:#94a3b8">15</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#ec4899;border-radius:3px;height:5px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Sandra VF</span><span style="color:#94a3b8">3</span></div><div style="background:#1e293b;border-radius:3px;height:5px"><div style="background:#ec4899;border-radius:3px;height:5px;width:20%"></div></div></div></div></div>
+</div>
+
+<div id="pnl-charts" class="pnl">
+  <div class="cs"><div class="ct">Cleanings per Cleaner</div><div style="height:240px"><canvas id="chart-vol"></canvas></div></div>
+  <div class="cs"><div class="ct">Pass Rate per Cleaner</div><div style="height:220px"><canvas id="chart-rep"></canvas></div></div>
+  <div class="cs"><div class="ct">Submitted by 2pm per Cleaner</div><div style="height:220px"><canvas id="chart-2pm"></canvas></div></div>
+  <div class="cs" style="margin-top:0"><div class="ct">Regional Distribution</div><div style="height:240px"><canvas id="chart-reg"></canvas></div></div>
+</div>
+
+<div id="pnl-failures" class="pnl">
+  <div class="fail-kpi-row">
+    <div class="kpi">
+      <div class="kv" style="color:#ef4444">197</div><div class="kl">Total Failed Entries</div><div class="ks">From Monday.com Failed group</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:#a855f7">103</div><div class="kl">Top Issue: Items Not Stocked</div><div class="ks">Most frequent failure reason</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:#64748b">336</div><div class="kl">Total Issue Flags</div><div class="ks">Multi-label — one entry can have several</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:#475569">87</div><div class="kl">No QC Review (Andrea)</div><div class="ks">Entries never reviewed by Andrea</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <div class="cs" style="margin-bottom:0">
+      <div class="ct">📊 Pareto — Top Failure Reasons (all cleaners)</div>
+      <div style="height:260px"><canvas id="chart-fail-pareto"></canvas></div>
+      <div style="font-size:11px;color:#475569;margin-top:8px">Bars = occurrence count · Multi-label: one entry may count in several categories</div>
+    </div>
+    <div class="cs" style="margin-bottom:0">
+      <div class="ct">📋 Category Breakdown</div><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b"><span style="width:12px;height:12px;border-radius:3px;background:#a855f7;flex-shrink:0"></span><span style="flex:1;font-size:13px;color:#e2e8f0">Items Not Stocked</span><span style="font-size:13px;font-weight:700;color:#a855f7">103</span><span style="font-size:11px;color:#64748b;margin-left:4px">(31%)</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b"><span style="width:12px;height:12px;border-radius:3px;background:#38bdf8;flex-shrink:0"></span><span style="flex:1;font-size:13px;color:#e2e8f0">Missing Photos</span><span style="font-size:13px;font-weight:700;color:#38bdf8">99</span><span style="font-size:11px;color:#64748b;margin-left:4px">(29%)</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b"><span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;flex-shrink:0"></span><span style="flex:1;font-size:13px;color:#e2e8f0">Cleanliness</span><span style="font-size:13px;font-weight:700;color:#f59e0b">48</span><span style="font-size:11px;color:#64748b;margin-left:4px">(14%)</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b"><span style="width:12px;height:12px;border-radius:3px;background:#14b8a6;flex-shrink:0"></span><span style="flex:1;font-size:13px;color:#e2e8f0">Presentation / Org</span><span style="font-size:13px;font-weight:700;color:#14b8a6">44</span><span style="font-size:11px;color:#64748b;margin-left:4px">(13%)</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b"><span style="width:12px;height:12px;border-radius:3px;background:#334155;flex-shrink:0"></span><span style="flex:1;font-size:13px;color:#e2e8f0">Other</span><span style="font-size:13px;font-weight:700;color:#334155">38</span><span style="font-size:11px;color:#64748b;margin-left:4px">(11%)</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b"><span style="width:12px;height:12px;border-radius:3px;background:#ec4899;flex-shrink:0"></span><span style="flex:1;font-size:13px;color:#e2e8f0">Timing / Before 2pm</span><span style="font-size:13px;font-weight:700;color:#ec4899">4</span><span style="font-size:11px;color:#64748b;margin-left:4px">(1%)</span></div>
+    </div>
+  </div>
+
+  <div class="cs" style="margin-bottom:18px">
+    <div class="ct">📸 Missing Photos — What's Most Often Missed?</div>
+    <p style="color:#64748b;font-size:12px;margin-bottom:16px">Specific items/areas missing from photo submissions · extracted from failure reason text</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div>
+        <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:10px">Overall — All Cleaners</div>
+        <div style="height:280px"><canvas id="chart-photo-subjects"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:10px">Per Cleaner — Top Missed Photo Items</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px"><div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:14px;border-top:3px solid #3b82f6"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:700;color:#f8fafc;font-size:13px">Oksana</span><span style="font-size:10px;color:#3b82f6;background:#3b82f622;padding:2px 7px;border-radius:10px">176 flags</span></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Coffee / Creamer</span><span style="color:#38bdf8;font-weight:700">19x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#38bdf8;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Silverware / Utensils</span><span style="color:#f59e0b;font-weight:700">18x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#f59e0b;border-radius:3px;height:4px;width:94%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Lock / Entry Video</span><span style="color:#a855f7;font-weight:700">18x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#a855f7;border-radius:3px;height:4px;width:94%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Beach Gear</span><span style="color:#10b981;font-weight:700">15x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#10b981;border-radius:3px;height:4px;width:78%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Pest / Bug Spray</span><span style="color:#ec4899;font-weight:700">14x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#ec4899;border-radius:3px;height:4px;width:73%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Dish Soap / Sponge</span><span style="color:#6366f1;font-weight:700">13x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#6366f1;border-radius:3px;height:4px;width:68%"></div></div></div></div><div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:14px;border-top:3px solid #a855f7"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:700;color:#f8fafc;font-size:13px">Maria Napa</span><span style="font-size:10px;color:#a855f7;background:#a855f722;padding:2px 7px;border-radius:10px">86 flags</span></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Silverware / Utensils</span><span style="color:#38bdf8;font-weight:700">12x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#38bdf8;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Dish Soap / Sponge</span><span style="color:#f59e0b;font-weight:700">10x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#f59e0b;border-radius:3px;height:4px;width:83%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Terrace / Balcony</span><span style="color:#a855f7;font-weight:700">9x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#a855f7;border-radius:3px;height:4px;width:75%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Coffee / Creamer</span><span style="color:#10b981;font-weight:700">9x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#10b981;border-radius:3px;height:4px;width:75%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Toilet Paper</span><span style="color:#ec4899;font-weight:700">7x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#ec4899;border-radius:3px;height:4px;width:58%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Lock / Entry Video</span><span style="color:#6366f1;font-weight:700">6x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#6366f1;border-radius:3px;height:4px;width:50%"></div></div></div></div><div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:14px;border-top:3px solid #a855f7"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:700;color:#f8fafc;font-size:13px">Complete Cleaning</span><span style="font-size:10px;color:#a855f7;background:#a855f722;padding:2px 7px;border-radius:10px">100 flags</span></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Silverware / Utensils</span><span style="color:#38bdf8;font-weight:700">16x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#38bdf8;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Toilet Paper</span><span style="color:#f59e0b;font-weight:700">13x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#f59e0b;border-radius:3px;height:4px;width:81%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Coffee / Creamer</span><span style="color:#a855f7;font-weight:700">11x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#a855f7;border-radius:3px;height:4px;width:68%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Dish Soap / Sponge</span><span style="color:#10b981;font-weight:700">10x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#10b981;border-radius:3px;height:4px;width:62%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Lock / Entry Video</span><span style="color:#ec4899;font-weight:700">10x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#ec4899;border-radius:3px;height:4px;width:62%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Terrace / Balcony</span><span style="color:#6366f1;font-weight:700">7x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#6366f1;border-radius:3px;height:4px;width:43%"></div></div></div></div><div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:14px;border-top:3px solid #f59e0b"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:700;color:#f8fafc;font-size:13px">Maria USVI</span><span style="font-size:10px;color:#f59e0b;background:#f59e0b22;padding:2px 7px;border-radius:10px">18 flags</span></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Silverware / Utensils</span><span style="color:#38bdf8;font-weight:700">2x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#38bdf8;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Lock / Entry Video</span><span style="color:#f59e0b;font-weight:700">2x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#f59e0b;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Toilet Paper</span><span style="color:#a855f7;font-weight:700">2x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#a855f7;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Dish Soap / Sponge</span><span style="color:#10b981;font-weight:700">2x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#10b981;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Shampoo / Toiletries</span><span style="color:#ec4899;font-weight:700">2x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#ec4899;border-radius:3px;height:4px;width:100%"></div></div></div><div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:#e2e8f0">Microwave</span><span style="color:#6366f1;font-weight:700">1x</span></div><div style="background:#1e293b;border-radius:3px;height:4px"><div style="background:#6366f1;border-radius:3px;height:4px;width:50%"></div></div></div></div>        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cs">
+    <div class="ct">🧹 Failure Reasons by Cleaner (stacked)</div>
+    <div style="height:300px"><canvas id="chart-fail-by-cleaner"></canvas></div>
+  </div>
+
+  <div class="cs">
+    <div class="ct">📊 Per-Cleaner Breakdown</div>
+    <table><thead><tr>
+      <th>Cleaner</th><th>Region</th>
+      <th style="text-align:center">Total Flags</th>
+      <th>Issue Categories</th>
+    </tr></thead><tbody><tr><td><strong>Oksana</strong></td><td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;padding:2px 8px;border-radius:12px;font-size:11px">🌺 Hawaii</span></td><td style="text-align:center"><strong>187</strong></td><td><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f733;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Items Not Stocked (54)</span><span style="background:#38bdf822;color:#38bdf8;border:1px solid #38bdf833;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Missing Photos (44)</span><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b33;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Cleanliness (34)</span><span style="background:#14b8a622;color:#14b8a6;border:1px solid #14b8a633;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Presentation / Org (32)</span><span style="background:#33415522;color:#334155;border:1px solid #33415533;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Other (21)</span><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489933;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Timing / Before 2pm (2)</span></td></tr>
+<tr><td><strong>Maria Napa</strong></td><td><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span></td><td style="text-align:center"><strong>82</strong></td><td><span style="background:#38bdf822;color:#38bdf8;border:1px solid #38bdf833;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Missing Photos (30)</span><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f733;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Items Not Stocked (25)</span><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b33;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Cleanliness (10)</span><span style="background:#33415522;color:#334155;border:1px solid #33415533;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Other (9)</span><span style="background:#14b8a622;color:#14b8a6;border:1px solid #14b8a633;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Presentation / Org (6)</span><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489933;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Timing / Before 2pm (2)</span></td></tr>
+<tr><td><strong>Complete Cleaning</strong></td><td><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span></td><td style="text-align:center"><strong>51</strong></td><td><span style="background:#38bdf822;color:#38bdf8;border:1px solid #38bdf833;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Missing Photos (21)</span><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f733;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Items Not Stocked (21)</span><span style="background:#14b8a622;color:#14b8a6;border:1px solid #14b8a633;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Presentation / Org (5)</span><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b33;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Cleanliness (2)</span><span style="background:#33415522;color:#334155;border:1px solid #33415533;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Other (2)</span></td></tr>
+<tr><td><strong>Maria USVI</strong></td><td><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:2px 8px;border-radius:12px;font-size:11px">🏝️ USVI</span></td><td style="text-align:center"><strong>16</strong></td><td><span style="background:#33415522;color:#334155;border:1px solid #33415533;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Other (6)</span><span style="background:#38bdf822;color:#38bdf8;border:1px solid #38bdf833;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Missing Photos (4)</span><span style="background:#a855f722;color:#a855f7;border:1px solid #a855f733;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Items Not Stocked (3)</span><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b33;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Cleanliness (2)</span><span style="background:#14b8a622;color:#14b8a6;border:1px solid #14b8a633;padding:2px 7px;border-radius:10px;font-size:11px;margin:2px;display:inline-block">Presentation / Org (1)</span></td></tr>
+</tbody></table>
+  </div>
+</div>
+
+<div id="pnl-emails" class="pnl">
+  <p style="color:#64748b;font-size:13px;margin-bottom:14px">Ready-to-send performance emails for each cleaner — pass rate &amp; on-time submission over the last 7, 30 and 60 days, plus their most common misses. Click &ldquo;Copy email&rdquo;, then paste into your mail client.</p>
+<div class="cs" style="margin-bottom:16px;border-top:3px solid #ec4899"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><span style="font-weight:700;color:#f8fafc;font-size:15px">Sandra VF</span> <span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;padding:2px 8px;border-radius:12px;font-size:11px">🗼 France</span></div><button onclick="copyEmail(this)" style="background:#38bdf8;color:#04263a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">📋 Copy email</button></div><textarea readonly style="width:100%;height:320px;background:#020617;color:#cbd5e1;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical">Subject: Bijou Getaways - Your Cleaning Quality Update (June 19, 2026)
+
+Hi Sandra VF,
+
+Thank you for your work in France. Here is your latest quality-control summary so you can see where you&#x27;re doing well and where to focus.
+
+PASS RATE (QC report passed)
+  - Last 7 days:  100.0%  (1 cleanings)
+  - Last 30 days: 100.0%  (3 cleanings)
+  - Last 60 days: 100.0%  (3 cleanings)
+
+SUBMITTED BY 2PM
+  - Last 7 days:  100.0%
+  - Last 30 days: 100.0%
+  - Last 60 days: 100.0%
+
+MOST COMMON ISSUES TO FIX
+  None recorded recently — great work!
+
+PHOTOS MOST OFTEN MISSING
+  - None recorded recently — great work!
+
+Please make sure each clean passes QC and that all required photos are submitted before 2pm. Let me know if you have any questions - happy to help.
+
+Thank you,
+Bijou Getaways Operations</textarea></div><div class="cs" style="margin-bottom:16px;border-top:3px solid #ec4899"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><span style="font-weight:700;color:#f8fafc;font-size:15px">Tavani Paris</span> <span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;padding:2px 8px;border-radius:12px;font-size:11px">🗼 France</span></div><button onclick="copyEmail(this)" style="background:#38bdf8;color:#04263a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">📋 Copy email</button></div><textarea readonly style="width:100%;height:320px;background:#020617;color:#cbd5e1;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical">Subject: Bijou Getaways - Your Cleaning Quality Update (June 19, 2026)
+
+Hi Tavani Paris,
+
+Thank you for your work in France. Here is your latest quality-control summary so you can see where you&#x27;re doing well and where to focus.
+
+PASS RATE (QC report passed)
+  - Last 7 days:  100.0%  (2 cleanings)
+  - Last 30 days: 100.0%  (12 cleanings)
+  - Last 60 days: 100.0%  (15 cleanings)
+
+SUBMITTED BY 2PM
+  - Last 7 days:  100.0%
+  - Last 30 days: 100.0%
+  - Last 60 days: 93.3%
+
+MOST COMMON ISSUES TO FIX
+  None recorded recently — great work!
+
+PHOTOS MOST OFTEN MISSING
+  - None recorded recently — great work!
+
+Please make sure each clean passes QC and that all required photos are submitted before 2pm. Let me know if you have any questions - happy to help.
+
+Thank you,
+Bijou Getaways Operations</textarea></div><div class="cs" style="margin-bottom:16px;border-top:3px solid #f59e0b"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><span style="font-weight:700;color:#f8fafc;font-size:15px">Maria USVI</span> <span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:2px 8px;border-radius:12px;font-size:11px">🏝️ USVI</span></div><button onclick="copyEmail(this)" style="background:#38bdf8;color:#04263a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">📋 Copy email</button></div><textarea readonly style="width:100%;height:320px;background:#020617;color:#cbd5e1;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical">Subject: Bijou Getaways - Your Cleaning Quality Update (June 19, 2026)
+
+Hi Maria USVI,
+
+Thank you for your work in USVI. Here is your latest quality-control summary so you can see where you&#x27;re doing well and where to focus.
+
+PASS RATE (QC report passed)
+  - Last 7 days:  50.0%  (2 cleanings)
+  - Last 30 days: 78.6%  (14 cleanings)
+  - Last 60 days: 80.0%  (30 cleanings)
+
+SUBMITTED BY 2PM
+  - Last 7 days:  100.0%
+  - Last 30 days: 92.9%
+  - Last 60 days: 96.7%
+
+MOST COMMON ISSUES TO FIX
+  1. Other — flagged 6 time(s)
+  2. Missing Photos — flagged 4 time(s)
+  3. Items Not Stocked — flagged 3 time(s)
+
+PHOTOS MOST OFTEN MISSING
+  - Silverware / Utensils
+  - Lock / Entry Video
+  - Toilet Paper
+
+Please make sure each clean passes QC and that all required photos are submitted before 2pm. Let me know if you have any questions - happy to help.
+
+Thank you,
+Bijou Getaways Operations</textarea></div><div class="cs" style="margin-bottom:16px;border-top:3px solid #a855f7"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><span style="font-weight:700;color:#f8fafc;font-size:15px">Maria Napa</span> <span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span></div><button onclick="copyEmail(this)" style="background:#38bdf8;color:#04263a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">📋 Copy email</button></div><textarea readonly style="width:100%;height:320px;background:#020617;color:#cbd5e1;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical">Subject: Bijou Getaways - Your Cleaning Quality Update (June 19, 2026)
+
+Hi Maria Napa,
+
+Thank you for your work in Napa. Here is your latest quality-control summary so you can see where you&#x27;re doing well and where to focus.
+
+PASS RATE (QC report passed)
+  - Last 7 days:  80.0%  (10 cleanings)
+  - Last 30 days: 48.6%  (35 cleanings)
+  - Last 60 days: 44.4%  (54 cleanings)
+
+SUBMITTED BY 2PM
+  - Last 7 days:  70.0%
+  - Last 30 days: 82.9%
+  - Last 60 days: 81.5%
+
+MOST COMMON ISSUES TO FIX
+  1. Missing Photos — flagged 30 time(s)
+  2. Items Not Stocked — flagged 25 time(s)
+  3. Cleanliness — flagged 10 time(s)
+
+PHOTOS MOST OFTEN MISSING
+  - Silverware / Utensils
+  - Dish Soap / Sponge
+  - Terrace / Balcony
+
+Please make sure each clean passes QC and that all required photos are submitted before 2pm. Let me know if you have any questions - happy to help.
+
+Thank you,
+Bijou Getaways Operations</textarea></div><div class="cs" style="margin-bottom:16px;border-top:3px solid #3b82f6"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><span style="font-weight:700;color:#f8fafc;font-size:15px">Oksana</span> <span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;padding:2px 8px;border-radius:12px;font-size:11px">🌺 Hawaii</span></div><button onclick="copyEmail(this)" style="background:#38bdf8;color:#04263a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">📋 Copy email</button></div><textarea readonly style="width:100%;height:320px;background:#020617;color:#cbd5e1;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical">Subject: Bijou Getaways - Your Cleaning Quality Update (June 19, 2026)
+
+Hi Oksana,
+
+Thank you for your work in Hawaii. Here is your latest quality-control summary so you can see where you&#x27;re doing well and where to focus.
+
+PASS RATE (QC report passed)
+  - Last 7 days:  62.5%  (8 cleanings)
+  - Last 30 days: 29.2%  (48 cleanings)
+  - Last 60 days: 18.7%  (75 cleanings)
+
+SUBMITTED BY 2PM
+  - Last 7 days:  87.5%
+  - Last 30 days: 91.7%
+  - Last 60 days: 77.3%
+
+MOST COMMON ISSUES TO FIX
+  1. Items Not Stocked — flagged 54 time(s)
+  2. Missing Photos — flagged 44 time(s)
+  3. Cleanliness — flagged 34 time(s)
+
+PHOTOS MOST OFTEN MISSING
+  - Coffee / Creamer
+  - Silverware / Utensils
+  - Lock / Entry Video
+
+Please make sure each clean passes QC and that all required photos are submitted before 2pm. Let me know if you have any questions - happy to help.
+
+Thank you,
+Bijou Getaways Operations</textarea></div><div class="cs" style="margin-bottom:16px;border-top:3px solid #a855f7"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><span style="font-weight:700;color:#f8fafc;font-size:15px">Complete Cleaning</span> <span style="background:#a855f722;color:#a855f7;border:1px solid #a855f744;padding:2px 8px;border-radius:12px;font-size:11px">🍷 Napa</span></div><button onclick="copyEmail(this)" style="background:#38bdf8;color:#04263a;border:none;padding:7px 16px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">📋 Copy email</button></div><textarea readonly style="width:100%;height:320px;background:#020617;color:#cbd5e1;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical">Subject: Bijou Getaways - Your Cleaning Quality Update (June 19, 2026)
+
+Hi Complete Cleaning,
+
+Thank you for your work in Napa. Here is your latest quality-control summary so you can see where you&#x27;re doing well and where to focus.
+
+PASS RATE (QC report passed)
+  - Last 7 days:  100.0%  (2 cleanings)
+  - Last 30 days: 10.5%  (19 cleanings)
+  - Last 60 days: 7.7%  (26 cleanings)
+
+SUBMITTED BY 2PM
+  - Last 7 days:  50.0%
+  - Last 30 days: 89.5%
+  - Last 60 days: 88.5%
+
+MOST COMMON ISSUES TO FIX
+  1. Missing Photos — flagged 21 time(s)
+  2. Items Not Stocked — flagged 21 time(s)
+  3. Presentation / Org — flagged 5 time(s)
+
+PHOTOS MOST OFTEN MISSING
+  - Silverware / Utensils
+  - Toilet Paper
+  - Coffee / Creamer
+
+Please make sure each clean passes QC and that all required photos are submitted before 2pm. Let me know if you have any questions - happy to help.
+
+Thank you,
+Bijou Getaways Operations</textarea></div></div>
+</div>
+
+<script>
+window._cd={};
+window._cd["Sandra_VF"]={labels:["26-05", "26-06"],totals:[1, 2],passes:[1, 2],fails:[0, 0]};
+window._cd["Tavani_Paris"]={labels:["26-05", "26-06"],totals:[8, 7],passes:[8, 7],fails:[0, 0]};
+window._cd["Maria_USVI"]={labels:["26-03", "26-04", "26-05", "26-06"],totals:[4, 21, 15, 7],passes:[2, 19, 10, 6],fails:[2, 2, 5, 1]};
+window._cd["Maria_Napa"]={labels:["26-03", "26-04", "26-05", "26-06"],totals:[14, 26, 24, 24],passes:[8, 9, 6, 16],fails:[6, 17, 18, 8]};
+window._cd["Oksana"]={labels:["26-03", "26-04", "26-05", "26-06"],totals:[27, 26, 43, 26],passes:[8, 9, 1, 13],fails:[19, 17, 42, 13]};
+window._cd["Complete_Cleaning"]={labels:["26-05", "26-06"],totals:[16, 10],passes:[0, 2],fails:[16, 8]};
+
+var cL=["Sandra VF", "Tavani Paris", "Maria USVI", "Maria Napa", "Oksana", "Complete Cleaning"],cT=[3, 15, 47, 88, 122, 26],cR=[100.0, 100.0, 78.7, 44.3, 25.4, 7.7],c2=[100.0, 93.3, 97.9, 86.4, 76.2, 88.5];var rL=["Hawaii", "Napa", "USVI", "France"],rT=[122, 114, 47, 18],rC=["#3b82f6", "#a855f7", "#f59e0b", "#ec4899"];
+
+var failParetoLabels=["Items Not Stocked", "Missing Photos", "Cleanliness", "Presentation / Org", "Other", "Timing / Before 2pm"];
+var failParetoCounts=[103, 99, 48, 44, 38, 4];
+var failParetoColors=["#a855f7", "#38bdf8", "#f59e0b", "#14b8a6", "#334155", "#ec4899"];
+var failCleanerLabels=["Oksana", "Maria Napa", "Complete Cleaning", "Maria USVI"];
+var failStackedDatasets=[{"label": "Items Not Stocked", "data": [54, 25, 21, 3], "color": "#a855f7"}, {"label": "Missing Photos", "data": [44, 30, 21, 4], "color": "#38bdf8"}, {"label": "Cleanliness", "data": [34, 10, 2, 2], "color": "#f59e0b"}, {"label": "Presentation / Org", "data": [32, 6, 5, 1], "color": "#14b8a6"}, {"label": "Other", "data": [21, 9, 2, 6], "color": "#334155"}, {"label": "Timing / Before 2pm", "data": [2, 2, 0, 0], "color": "#ec4899"}];
+var photoSubjLabels=["Silverware / Utensils", "Coffee / Creamer", "Lock / Entry Video", "Dish Soap / Sponge", "Toilet Paper", "Terrace / Balcony", "Windows / Curtains", "Extra Towels", "Beach Gear", "Trash Bags", "Bathroom / Sink", "Fridge / Water Pitcher"];
+var photoSubjCounts=[48, 40, 36, 35, 31, 25, 16, 16, 16, 15, 15, 15];
+var photoSubjColors=["#38bdf8", "#f59e0b", "#a855f7", "#10b981", "#ec4899", "#6366f1", "#14b8a6", "#f97316", "#84cc16", "#e11d48", "#06b6d4", "#d946ef"];
+
+window.addEventListener('DOMContentLoaded', function() {
+  // Overview performance chart — grouped bars, no cumulative line
+  var repColors = cR.map(function(v) {
+    return v === null ? '#334155' : v >= 70 ? '#10b981' : v >= 40 ? '#f59e0b' : '#ef4444';
+  });
+  var twopmColors = c2.map(function() { return '#38bdf888'; });
+  new Chart(document.getElementById('chart-perf'), {
+    type: 'bar',
+    data: {
+      labels: cL,
+      datasets: [
+        {label: 'Pass Rate %', data: cR.map(function(v){return v===null?0:v;}), backgroundColor: repColors, borderRadius: 5},
+        {label: 'By 2pm %',    data: c2.map(function(v){return v===null?0:v;}), backgroundColor: '#38bdf866', borderColor: '#38bdf8', borderWidth: 1, borderRadius: 5}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {labels: {color: '#94a3b8', font: {size: 11}}},
+        tooltip: {callbacks: {label: function(ctx) {
+          var orig = ctx.datasetIndex === 0 ? cR[ctx.dataIndex] : c2[ctx.dataIndex];
+          return ctx.dataset.label + ': ' + (orig === null ? 'N/A' : orig + '%');
+        }}}
+      },
+      scales: {
+        x: {ticks: {color: '#64748b', font: {size: 10}}, grid: {color: '#1e293b'}},
+        y: {ticks: {color: '#64748b', callback: function(v){return v+'%';}}, grid: {color: '#1e293b'}, min: 0, max: 100}
+      }
+    }
+  });
+});
+
+function sw(name, el) {
+  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('pnl-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'charts')   initCharts();
+  if (name === 'failures') initFailCharts();
+}
+
+var ci = false;
+function initCharts() {
+  if (ci) return; ci = true;
+  var sc = {x:{ticks:{color:'#64748b',font:{size:11}},grid:{color:'#1e293b'}}, y:{ticks:{color:'#64748b'},grid:{color:'#1e293b'},beginAtZero:true}};
+  var ps = {x:{ticks:{color:'#64748b',font:{size:11}},grid:{color:'#1e293b'}}, y:{ticks:{color:'#64748b',callback:function(v){return v+'%';}},grid:{color:'#1e293b'},min:0,max:100}};
+  new Chart(document.getElementById('chart-vol'), {
+    type:'bar', data:{labels:cL, datasets:[{data:cT, backgroundColor:'#38bdf8', borderRadius:6}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:sc}
+  });
+  var repC = cR.map(function(v){return v===null?'#334155':v>=70?'#10b981':v>=40?'#f59e0b':'#ef4444';});
+  new Chart(document.getElementById('chart-rep'), {
+    type:'bar', data:{labels:cL, datasets:[{data:cR.map(function(v){return v||0;}), backgroundColor:repC, borderRadius:5}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:ps}
+  });
+  var tC = c2.map(function(v){return v===null?'#334155':'#38bdf8';});
+  new Chart(document.getElementById('chart-2pm'), {
+    type:'bar', data:{labels:cL, datasets:[{data:c2.map(function(v){return v||0;}), backgroundColor:tC, borderRadius:5}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:ps}
+  });
+  new Chart(document.getElementById('chart-reg'), {
+    type:'doughnut', data:{labels:rL, datasets:[{data:rT, backgroundColor:rC, borderColor:'#020617', borderWidth:3}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:13}}},
+      tooltip:{callbacks:{label:function(c){return c.label+': '+c.parsed+' cleanings';}}}}}
+  });
+}
+
+var fi = false;
+function initFailCharts() {
+  if (fi) return; fi = true;
+  new Chart(document.getElementById('chart-fail-pareto'), {
+    type: 'bar',
+    data: {labels: failParetoLabels, datasets: [
+      {type:'bar',  label:'Occurrences', data:failParetoCounts, backgroundColor:failParetoColors, borderRadius:5}
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {legend:{labels:{color:'#94a3b8',font:{size:11}}},
+                tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y;}}}},
+      scales: {
+        x:{ticks:{color:'#64748b',font:{size:11},maxRotation:30},grid:{color:'#1e293b'}},
+        y:{ticks:{color:'#64748b'},grid:{color:'#1e293b'},beginAtZero:true,title:{display:true,text:'Count',color:'#64748b',font:{size:11}}}
+      }
+    }
+  });
+  var photoSubjEl = document.getElementById('chart-photo-subjects');
+  if (photoSubjEl && photoSubjLabels.length) {
+    new Chart(photoSubjEl, {
+      type: 'bar',
+      data: {
+        labels: photoSubjLabels,
+        datasets: [{
+          data: photoSubjCounts,
+          backgroundColor: photoSubjColors.map(function(c){return c+'cc';}),
+          borderColor: photoSubjColors,
+          borderWidth: 1,
+          borderRadius: 5
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {display: false},
+          tooltip: {callbacks: {label: function(ctx){return ctx.parsed.x + ' occurrences';}}}
+        },
+        scales: {
+          x: {ticks:{color:'#64748b'},grid:{color:'#1e293b'},beginAtZero:true,
+              title:{display:true,text:'Occurrences',color:'#64748b',font:{size:11}}},
+          y: {ticks:{color:'#94a3b8',font:{size:11}},grid:{color:'#1e293b'}}
+        }
+      }
+    });
+  }
+  var stackedDs = failStackedDatasets.map(function(d) {
+    return {label:d.label, data:d.data, backgroundColor:d.color+'cc', borderColor:d.color, borderWidth:1, borderRadius:3};
+  });
+  new Chart(document.getElementById('chart-fail-by-cleaner'), {
+    type:'bar', data:{labels:failCleanerLabels, datasets:stackedDs},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:11},boxWidth:12}},
+               tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:11}},grid:{color:'#1e293b'},stacked:true},
+        y:{ticks:{color:'#64748b'},grid:{color:'#1e293b'},beginAtZero:true,stacked:true,
+           title:{display:true,text:'Issue Flags',color:'#64748b',font:{size:11}}}
+      }
+    }
+  });
+}
+
+var AD = null;
+function showDetail(key) {
+  var id = 'detail-' + key;
+  if (AD && AD !== id) { var p = document.getElementById(AD); if (p) p.style.display = 'none'; }
+  var el = document.getElementById(id); if (!el) return;
+  if (el.style.display === 'block') { el.style.display = 'none'; AD = null; return; }
+  el.style.display = 'block'; AD = id;
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+  var d = window._cd[key];
+  if (d) {
+    var cv = document.getElementById('chart-' + key);
+    if (cv && !cv._ok) { cv._ok = true;
+      new Chart(cv, {type:'bar', data:{labels:d.labels, datasets:[
+        {label:'Total', data:d.totals, backgroundColor:'#334155', borderRadius:4},
+        {label:'Pass',  data:d.passes, backgroundColor:'#10b981', borderRadius:4},
+        {label:'Fail',  data:d.fails,  backgroundColor:'#ef4444', borderRadius:4}
+      ]}, options:{responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+        scales:{x:{ticks:{color:'#64748b'},grid:{color:'#1e293b'}},y:{ticks:{color:'#64748b'},grid:{color:'#1e293b'},beginAtZero:true}}}});
+    }
+  }
+}
+function hideDetail() { if (AD) { var e = document.getElementById(AD); if (e) e.style.display = 'none'; AD = null; } }
+function copyEmail(btn) {
+  var card = btn.closest('.cs');
+  var ta = card ? card.querySelector('textarea') : null;
+  if (!ta) return;
+  ta.focus(); ta.select();
+  var done = function(){ var o = btn.innerHTML; btn.innerHTML = '✓ Copied'; setTimeout(function(){ btn.innerHTML = o; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done, function(){ try { document.execCommand('copy'); done(); } catch(e){} });
+  } else { try { document.execCommand('copy'); done(); } catch(e){} }
+}
+</script></body></html>
